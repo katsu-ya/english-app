@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>えいご きいて えらぼう！</title>
+<style>
+  :root {
+    --bg1: #fff6d6;
+    --bg2: #d9f3ff;
+    --ink: #3a2e1f;
+    --main: #ff8a3d;
+    --main-dark: #e0661a;
+    --blue: #3db5ff;
+    --green: #4cc96b;
+    --red: #ff5a5a;
+    --card: #ffffff;
+    --u: min(1vw, 1.25dvh);   /* 画面に合わせた基準サイズ */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Meiryo", sans-serif;
+    color: var(--ink);
+    background: linear-gradient(160deg, var(--bg1), var(--bg2));
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .app {
+    height: 100vh;
+    height: 100dvh;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: max(10px, env(safe-area-inset-top)) 16px max(10px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+  }
+  .screen { display: none; flex: 1; min-height: 0; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  button {
+    font-family: inherit;
+    color: inherit;
+    border: none;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .big-btn {
+    font-size: clamp(22px, calc(var(--u) * 3.4), 36px);
+    font-weight: 800;
+    padding: 0.55em 1.4em;
+    border-radius: 999px;
+    background: var(--main);
+    color: #fff;
+    box-shadow: 0 6px 0 var(--main-dark);
+    transition: transform .08s;
+  }
+  .big-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--main-dark); }
+  .big-btn.sub { background: var(--blue); box-shadow: 0 6px 0 #1f8fd6; }
+  .big-btn.sub:active { box-shadow: 0 2px 0 #1f8fd6; }
+
+  /* ===== スタート画面 ===== */
+  #start { align-items: center; justify-content: center; gap: clamp(10px, 3.2dvh, 34px); text-align: center; }
+  .title {
+    font-size: clamp(28px, calc(var(--u) * 5), 54px);
+    font-weight: 900;
+    color: var(--main);
+    text-shadow: 3px 3px 0 #fff, 5px 5px 0 rgba(0,0,0,.08);
+    line-height: 1.2;
+  }
+  .nw { white-space: nowrap; display: inline-block; }
+  .lead { font-size: clamp(18px, calc(var(--u) * 2.8), 28px); font-weight: 700; }
+  .themes {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(10px, 2.6dvh, 26px) clamp(12px, 2vw, 26px);
+    width: 100%;
+    max-width: 900px;
+    padding: 0 8px;
+  }
+  .theme-btn {
+    background: var(--card);
+    border-radius: 22px;
+    padding: clamp(6px, 1.8dvh, 18px) 4px;
+    box-shadow: 0 6px 0 rgba(0,0,0,.12);
+    display: flex; flex-direction: column; align-items: center; gap: clamp(2px, .8dvh, 8px);
+    font-size: clamp(15px, calc(var(--u) * 2.2), 24px);
+    white-space: nowrap;
+    font-weight: 800;
+    border: 4px solid transparent;
+    transition: transform .08s;
+  }
+  .theme-btn .emo { font-size: clamp(28px, calc(var(--u) * 4.2), 50px); line-height: 1.1; }
+  .theme-btn.all { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 12px; }
+  .theme-btn.all .emo { font-size: clamp(24px, calc(var(--u) * 3.6), 40px); }
+  .theme-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.12); }
+  .warn { font-size: 16px; color: var(--red); font-weight: 700; }
+
+  /* ===== 問題画面 ===== */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    font-size: clamp(16px, calc(var(--u) * 2.4), 26px);
+    font-weight: 800;
+  }
+  .home-btn {
+    white-space: nowrap;
+    background: #fff; border-radius: 999px; padding: .3em .8em;
+    box-shadow: 0 3px 0 rgba(0,0,0,.12); font-size: inherit; font-weight: 800;
+  }
+  .dots { flex: 1; min-width: 0; display: flex; gap: clamp(3px, calc(var(--u) * .7), 8px); flex-wrap: wrap; justify-content: center; }
+  .dot {
+    width: clamp(12px, calc(var(--u) * 2), 22px); aspect-ratio: 1; border-radius: 50%;
+    background: #fff; border: 3px solid #e0d6c4;
+  }
+  .dot.now { border-color: var(--main); transform: scale(1.2); }
+  .dot.ok { background: var(--green); border-color: var(--green); }
+  .dot.ng { background: #ffc2c2; border-color: #ffc2c2; }
+
+  .prompt {
+    display: flex; align-items: center; justify-content: center;
+    gap: clamp(12px, calc(var(--u) * 3), 36px);
+    padding: clamp(6px, calc(var(--u) * 1.5), 18px) 0;
+  }
+  .speaker {
+    width: clamp(78px, calc(var(--u) * 14), 150px);
+    aspect-ratio: 1;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--blue);
+    box-shadow: 0 7px 0 #1f8fd6;
+    font-size: clamp(40px, calc(var(--u) * 7.5), 80px);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .08s;
+  }
+  .speaker:active { transform: translateY(5px); box-shadow: 0 2px 0 #1f8fd6; }
+  .speaker.talking { animation: pulse .6s ease-in-out infinite alternate; }
+  @keyframes pulse { to { transform: scale(1.08); } }
+  .words { min-width: 0; max-width: 100%; text-align: left; }
+  .en {
+    font-family: "Arial Rounded MT Bold", "Comic Sans MS", "Segoe UI", Arial, sans-serif;
+    font-size: clamp(30px, calc(var(--u) * 6.5), 72px);
+    font-weight: 900;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+  .ja {
+    font-size: clamp(20px, calc(var(--u) * 3.4), 38px);
+    font-weight: 800;
+    color: var(--main-dark);
+    min-height: 1.4em;
+  }
+  .ja.hidden { visibility: hidden; }
+  .hint { font-size: clamp(14px, calc(var(--u) * 2), 20px); font-weight: 700; color: #8a7a62; }
+
+  .choices {
+    flex: 1; min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: clamp(10px, calc(var(--u) * 2), 22px);
+    padding-bottom: clamp(6px, calc(var(--u) * 1.2), 14px);
+  }
+  .choice {
+    position: relative;
+    background: var(--card);
+    border-radius: 28px;
+    box-shadow: 0 7px 0 rgba(0,0,0,.12);
+    border: 5px solid #ffe2a8;
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(54px, min(calc(var(--u) * 12), 15dvh), 130px);
+    line-height: 1;
+    min-height: 0;
+    transition: transform .08s, opacity .2s;
+  }
+  .choice:active:not(:disabled) { transform: translateY(5px); box-shadow: 0 2px 0 rgba(0,0,0,.12); }
+  .choice:disabled { cursor: default; }
+  .choice.correct { border-color: var(--green); background: #eaffe9; }
+  .choice.wrong { border-color: var(--red); background: #ffecec; }
+  .choice.dim { opacity: .45; }
+  .choice .mark {
+    position: absolute; top: 6px; right: 10px;
+    font-size: clamp(26px, calc(var(--u) * 5), 52px);
+  }
+  .choice.shake { animation: shake .4s; }
+  @keyframes shake {
+    20%, 60% { transform: translateX(-8px); }
+    40%, 80% { transform: translateX(8px); }
+  }
+
+  .bottom { display: flex; justify-content: center; align-items: center; min-height: clamp(56px, calc(var(--u) * 9), 90px); }
+  .bottom .big-btn { visibility: hidden; }
+  .bottom .big-btn.show { visibility: visible; animation: pop .3s; }
+
+  /* はなまる */
+  .hanamaru {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 10;
+  }
+  .hanamaru.show { animation: hanamaru 1.4s ease-out forwards; }
+  .hanamaru svg { width: min(60vw, 52dvh); height: auto; filter: drop-shadow(0 6px 8px rgba(0,0,0,.15)); }
+  .hanamaru .great {
+    font-family: "Arial Rounded MT Bold", "Comic Sans MS", Arial, sans-serif;
+    font-size: clamp(44px, calc(var(--u) * 10), 110px);
+    font-weight: 900; color: var(--red);
+    text-shadow: 4px 4px 0 #fff;
+    margin-top: -0.4em;
+  }
+  @keyframes hanamaru {
+    0% { opacity: 0; transform: scale(.3) rotate(-30deg); }
+    25% { opacity: 1; transform: scale(1.08) rotate(0); }
+    35% { transform: scale(1); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: scale(1); }
+  }
+  @keyframes pop { from { transform: scale(.6); } to { transform: scale(1); } }
+
+  /* ===== 結果画面 ===== */
+  #result { align-items: center; justify-content: center; text-align: center; gap: clamp(8px, calc(var(--u) * 2), 22px); }
+  .result-title { font-size: clamp(28px, calc(var(--u) * 5), 56px); font-weight: 900; color: var(--main); }
+  .score {
+    font-size: clamp(64px, calc(var(--u) * 16), 180px);
+    font-weight: 900; line-height: 1;
+    color: var(--red);
+    text-shadow: 4px 4px 0 #fff;
+  }
+  .score small { font-size: .4em; color: var(--ink); }
+  .stars { font-size: clamp(36px, calc(var(--u) * 7), 76px); letter-spacing: .1em; }
+  .message { font-size: clamp(20px, calc(var(--u) * 3.4), 36px); font-weight: 800; }
+  .result-btns { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+
+  /* ===== 設定画面 ===== */
+  #start { position: relative; }
+  .gear-btn {
+    position: absolute; top: 0; right: 0;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: #fff; font-size: 32px;
+    box-shadow: 0 4px 0 rgba(0,0,0,.12);
+  }
+  .gear-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.12); }
+  #settings { gap: 12px; }
+  .set-title { font-size: clamp(20px, calc(var(--u) * 3.2), 32px); font-weight: 900; text-align: center; }
+  .set-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .set-label { font-size: 20px; font-weight: 900; min-width: 3.5em; }
+  .seg { display: flex; gap: 8px; flex-wrap: wrap; }
+  .seg button {
+    font-size: 18px; font-weight: 800; padding: .45em .9em; border-radius: 999px;
+    background: #fff; border: 3px solid #ffe2a8; box-shadow: 0 3px 0 rgba(0,0,0,.1);
+  }
+  .seg button.on { background: var(--main); border-color: var(--main); color: #fff; }
+  .check { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .check input { width: 24px; height: 24px; accent-color: var(--main); }
+  .voice-list {
+    flex: 1; min-height: 0; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 4px 4px 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .voice-item {
+    display: grid; grid-template-columns: auto 1fr; column-gap: 12px; align-items: center;
+    text-align: left; background: #fff; border-radius: 18px; padding: 10px 16px;
+    border: 3px solid #ffe2a8; box-shadow: 0 3px 0 rgba(0,0,0,.08);
+  }
+  .voice-item.on { border-color: var(--main); background: #fff3e6; }
+  .voice-item .radio {
+    grid-row: span 2; width: 26px; height: 26px; border-radius: 50%;
+    border: 3px solid #d8c8ad; background: #fff;
+  }
+  .voice-item.on .radio { border-color: var(--main); background: radial-gradient(var(--main) 45%, #fff 50%); }
+  .vname { font-size: 19px; font-weight: 800; overflow-wrap: anywhere; }
+  .vsub { font-size: 14px; color: #8a7a62; font-weight: 700; }
+  .set-note { font-size: 14px; color: #8a7a62; font-weight: 700; }
+
+  /* スマホ縦 */
+  @media (max-aspect-ratio: 3/4) {
+    :root { --u: min(1.6vw, 1dvh); }
+    .themes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .themes { gap: clamp(8px, 1.8dvh, 16px) 12px; padding: 0 4px; }
+    .theme-btn { font-size: 15px; padding: clamp(5px, 1.2dvh, 10px) 2px; border-radius: 18px; }
+    .theme-btn .emo { font-size: clamp(28px, 4.6dvh, 38px); }
+    #start { gap: clamp(10px, 2.2dvh, 22px); padding-top: 52px; }
+    .title { font-size: clamp(24px, 7vw, 30px); }
+    .dot { width: 11px; border-width: 2px; }
+    .home-btn { padding: .3em .6em; }
+    .set-title { font-size: 18px; }
+    #settings .home-btn { font-size: 16px; }
+    .seg button { font-size: 16px; padding: .4em .7em; }
+    .set-label { min-width: 0; font-size: 18px; }
+    .prompt { flex-direction: column; gap: 8px; }
+    .words { text-align: center; }
+    .choice { font-size: clamp(54px, min(22vw, 13dvh), 120px); border-radius: 22px; }
+    .big-btn { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- スタート -->
+  <section id="start" class="screen active">
+    <h1 class="title"><span class="nw">🎧 えいご きいて</span> <span class="nw">えらぼう！</span></h1>
+    <button class="gear-btn" id="gearBtn" aria-label="こえの せってい">⚙️</button>
+    <p class="lead">テーマを えらんでね</p>
+    <div class="themes" id="themes"></div>
+    <p class="warn" id="noSpeech" hidden>このブラウザでは おとが でません。Chrome や Safari で ひらいてね。</p>
+  </section>
+
+  <!-- 設定 -->
+  <section id="settings" class="screen">
+    <div class="topbar">
+      <button class="home-btn" id="settingsBack">◀ もどる</button>
+      <div class="set-title">⚙️ こえの せってい</div>
+      <button class="home-btn" id="testVoice">🔊 きく</button>
+    </div>
+    <div class="set-row">
+      <span class="set-label">はやさ</span>
+      <div class="seg" id="rateBtns">
+        <button data-rate="slow">🐢 ゆっくり</button>
+        <button data-rate="normal">🚶 ふつう</button>
+        <button data-rate="fast">🐇 はやい</button>
+      </div>
+    </div>
+    <div class="set-row">
+      <span class="set-label">こえ</span>
+      <label class="check"><input type="checkbox" id="showAll"> ほかの えいごの こえも みる</label>
+    </div>
+    <div class="voice-list" id="voiceList"></div>
+    <p class="set-note">★ は しぜんな こえ（Natural・Google・高品質）です。えらぶと おためしで よみあげます。</p>
+  </section>
+
+  <!-- 問題 -->
+  <section id="quiz" class="screen">
+    <div class="topbar">
+      <button class="home-btn" id="homeBtn">🏠 もどる</button>
+      <div class="dots" id="dots"></div>
+      <div id="counter">1/10</div>
+    </div>
+
+    <div class="prompt">
+      <button class="speaker" id="speakerBtn" aria-label="もういちど きく">🔊</button>
+      <div class="words">
+        <div class="en" id="enText">Hello</div>
+        <div class="ja hidden" id="jaText">こんにちは</div>
+        <div class="hint" id="hintText">🔊を おすと なんども きけるよ</div>
+      </div>
+    </div>
+
+    <div class="choices" id="choices"></div>
+
+    <div class="bottom">
+      <button class="big-btn" id="nextBtn">つぎへ ▶</button>
+    </div>
+  </section>
+
+  <!-- 結果 -->
+  <section id="result" class="screen">
+    <div class="result-title">おしまい！</div>
+    <div class="score" id="score">10<small> / 10もん</small></div>
+    <div class="stars" id="stars"></div>
+    <div class="message" id="message"></div>
+    <div class="result-btns">
+      <button class="big-btn" id="retryBtn">🔁 もういちど</button>
+      <button class="big-btn sub" id="toHomeBtn">🏠 テーマを えらぶ</button>
+    </div>
+  </section>
+</div>
+
+<!-- はなまる -->
+<div class="hanamaru" id="hanamaru">
+  <svg viewBox="0 0 200 200" aria-hidden="true">
+    <g fill="none" stroke="#ff4b4b" stroke-width="7" stroke-linecap="round">
+      <!-- 花びら -->
+      <g id="petals"></g>
+      <!-- うずまき -->
+      <path d="M100 100 m-8 0 a8 8 0 1 0 16 0 a14 14 0 1 0 -28 0 a22 22 0 1 0 44 0 a30 30 0 1 0 -60 0 a38 38 0 1 0 76 0"/>
+    </g>
+  </svg>
+  <div class="great">Great!</div>
+</div>
+
+<script>
+// ===== データ =====
+const THEMES = {
+  greet: {
+    name: "あいさつ", emo: "👋",
+    items: [
+      { en: "Hello",            ja: "こんにちは",           pic: "🙋" },
+      { en: "Goodbye",          ja: "さようなら",           pic: "👋" },
+      { en: "Good morning",     ja: "おはよう",             pic: "🌅" },
+      { en: "Good night",       ja: "おやすみなさい",       pic: "🌙" },
+      { en: "Thank you",        ja: "ありがとう",           pic: "🙏" },
+      { en: "I'm sorry",        ja: "ごめんなさい",         pic: "🙇" },
+      { en: "Nice to meet you", ja: "はじめまして",         pic: "🤝" },
+      { en: "I'm happy",        ja: "うれしい",             pic: "😄" },
+      { en: "I'm sad",          ja: "かなしい",             pic: "😢" },
+      { en: "I'm hungry",       ja: "おなかが すいた",      pic: "🍽️" },
+      { en: "I'm sleepy",       ja: "ねむい",               pic: "😪" },
+      { en: "Let's eat",        ja: "いただきます（たべよう）", pic: "🍙" },
+    ]
+  },
+  animal: {
+    name: "どうぶつ", emo: "🐶",
+    items: [
+      { en: "dog",      ja: "いぬ",     pic: "🐶" },
+      { en: "cat",      ja: "ねこ",     pic: "🐱" },
+      { en: "rabbit",   ja: "うさぎ",   pic: "🐰" },
+      { en: "bear",     ja: "くま",     pic: "🐻" },
+      { en: "lion",     ja: "ライオン", pic: "🦁" },
+      { en: "elephant", ja: "ぞう",     pic: "🐘" },
+      { en: "monkey",   ja: "さる",     pic: "🐵" },
+      { en: "panda",    ja: "パンダ",   pic: "🐼" },
+      { en: "pig",      ja: "ぶた",     pic: "🐷" },
+      { en: "cow",      ja: "うし",     pic: "🐮" },
+      { en: "tiger",    ja: "とら",     pic: "🐯" },
+      { en: "bird",     ja: "とり",     pic: "🐦" },
+      { en: "fish",     ja: "さかな",   pic: "🐟" },
+      { en: "frog",     ja: "かえる",   pic: "🐸" },
+    ]
+  },
+  fruit: {
+    name: "くだもの", emo: "🍎",
+    items: [
+      { en: "apple",      ja: "りんご",       pic: "🍎" },
+      { en: "banana",     ja: "バナナ",       pic: "🍌" },
+      { en: "orange",     ja: "オレンジ",     pic: "🍊" },
+      { en: "grapes",     ja: "ぶどう",       pic: "🍇" },
+      { en: "strawberry", ja: "いちご",       pic: "🍓" },
+      { en: "peach",      ja: "もも",         pic: "🍑" },
+      { en: "melon",      ja: "メロン",       pic: "🍈" },
+      { en: "cherry",     ja: "さくらんぼ",   pic: "🍒" },
+      { en: "lemon",      ja: "レモン",       pic: "🍋" },
+      { en: "pineapple",  ja: "パイナップル", pic: "🍍" },
+      { en: "watermelon", ja: "すいか",       pic: "🍉" },
+      { en: "kiwi",       ja: "キウイ",       pic: "🥝" },
+    ]
+  },
+  color: {
+    name: "いろ", emo: "🎨",
+    items: [
+      { en: "red",    ja: "あか",       pic: "❤️" },
+      { en: "blue",   ja: "あお",       pic: "💙" },
+      { en: "yellow", ja: "きいろ",     pic: "💛" },
+      { en: "green",  ja: "みどり",     pic: "💚" },
+      { en: "purple", ja: "むらさき",   pic: "💜" },
+      { en: "orange", ja: "オレンジいろ", pic: "🧡" },
+      { en: "black",  ja: "くろ",       pic: "🖤" },
+      { en: "white",  ja: "しろ",       pic: "🤍" },
+      { en: "brown",  ja: "ちゃいろ",   pic: "🤎" },
+      { en: "pink",   ja: "ピンク",     pic: "🩷" },
+    ]
+  },
+  number: {
+    name: "かず", emo: "🔢",
+    items: [
+      { en: "one",   ja: "いち（1）",   pic: "1️⃣" },
+      { en: "two",   ja: "に（2）",     pic: "2️⃣" },
+      { en: "three", ja: "さん（3）",   pic: "3️⃣" },
+      { en: "four",  ja: "よん（4）",   pic: "4️⃣" },
+      { en: "five",  ja: "ご（5）",     pic: "5️⃣" },
+      { en: "six",   ja: "ろく（6）",   pic: "6️⃣" },
+      { en: "seven", ja: "なな（7）",   pic: "7️⃣" },
+      { en: "eight", ja: "はち（8）",   pic: "8️⃣" },
+      { en: "nine",  ja: "きゅう（9）", pic: "9️⃣" },
+      { en: "ten",   ja: "じゅう（10）", pic: "🔟" },
+    ]
+  },
+  vegetable: {
+    name: "やさい", emo: "🥕",
+    items: [
+      { en: "carrot",       ja: "にんじん",     pic: "🥕" },
+      { en: "tomato",       ja: "トマト",       pic: "🍅" },
+      { en: "potato",       ja: "じゃがいも",   pic: "🥔" },
+      { en: "corn",         ja: "とうもろこし", pic: "🌽" },
+      { en: "onion",        ja: "たまねぎ",     pic: "🧅" },
+      { en: "cucumber",     ja: "きゅうり",     pic: "🥒" },
+      { en: "eggplant",     ja: "なす",         pic: "🍆" },
+      { en: "broccoli",     ja: "ブロッコリー", pic: "🥦" },
+      { en: "mushroom",     ja: "きのこ",       pic: "🍄" },
+      { en: "garlic",       ja: "にんにく",     pic: "🧄" },
+      { en: "green pepper", ja: "ピーマン",     pic: "🫑" },
+      { en: "cabbage",      ja: "キャベツ",     pic: "🥬" },
+    ]
+  },
+  food: {
+    name: "たべもの", emo: "🍔",
+    items: [
+      { en: "rice",       ja: "ごはん",         pic: "🍚" },
+      { en: "bread",      ja: "パン",           pic: "🍞" },
+      { en: "pizza",      ja: "ピザ",           pic: "🍕" },
+      { en: "hamburger",  ja: "ハンバーガー",   pic: "🍔" },
+      { en: "curry",      ja: "カレー",         pic: "🍛" },
+      { en: "noodles",    ja: "めん（ラーメン）", pic: "🍜" },
+      { en: "egg",        ja: "たまご",         pic: "🥚" },
+      { en: "cake",       ja: "ケーキ",         pic: "🍰" },
+      { en: "ice cream",  ja: "アイスクリーム", pic: "🍦" },
+      { en: "milk",       ja: "ぎゅうにゅう",   pic: "🥛" },
+      { en: "cookie",     ja: "クッキー",       pic: "🍪" },
+      { en: "sandwich",   ja: "サンドイッチ",   pic: "🥪" },
+      { en: "juice",      ja: "ジュース",       pic: "🧃" },
+    ]
+  },
+  vehicle: {
+    name: "のりもの", emo: "🚗",
+    items: [
+      { en: "car",         ja: "くるま",         pic: "🚗" },
+      { en: "bus",         ja: "バス",           pic: "🚌" },
+      { en: "train",       ja: "でんしゃ",       pic: "🚃" },
+      { en: "airplane",    ja: "ひこうき",       pic: "✈️" },
+      { en: "ship",        ja: "ふね",           pic: "🚢" },
+      { en: "bicycle",     ja: "じてんしゃ",     pic: "🚲" },
+      { en: "taxi",        ja: "タクシー",       pic: "🚕" },
+      { en: "truck",       ja: "トラック",       pic: "🚚" },
+      { en: "helicopter",  ja: "ヘリコプター",   pic: "🚁" },
+      { en: "rocket",      ja: "ロケット",       pic: "🚀" },
+      { en: "fire engine", ja: "しょうぼうしゃ", pic: "🚒" },
+      { en: "ambulance",   ja: "きゅうきゅうしゃ", pic: "🚑" },
+      { en: "police car",  ja: "パトカー",       pic: "🚓" },
+    ]
+  },
+  body: {
+    name: "からだ", emo: "👀",
+    items: [
+      { en: "eye",    ja: "め",     pic: "👁️" },
+      { en: "ear",    ja: "みみ",   pic: "👂" },
+      { en: "nose",   ja: "はな",   pic: "👃" },
+      { en: "mouth",  ja: "くち",   pic: "👄" },
+      { en: "hand",   ja: "て",     pic: "✋" },
+      { en: "foot",   ja: "あし",   pic: "🦶" },
+      { en: "tooth",  ja: "は",     pic: "🦷" },
+      { en: "arm",    ja: "うで",   pic: "💪" },
+      { en: "tongue", ja: "した",   pic: "👅" },
+      { en: "finger", ja: "ゆび",   pic: "☝️" },
+      { en: "face",   ja: "かお",   pic: "🙂" },
+    ]
+  },
+  weather: {
+    name: "てんき・そら", emo: "☀️",
+    items: [
+      { en: "sunny",    ja: "はれ",       pic: "☀️" },
+      { en: "cloudy",   ja: "くもり",     pic: "☁️" },
+      { en: "rainy",    ja: "あめ",       pic: "🌧️" },
+      { en: "snowy",    ja: "ゆき",       pic: "❄️" },
+      { en: "windy",    ja: "かぜが つよい", pic: "🌬️" },
+      { en: "rainbow",  ja: "にじ",       pic: "🌈" },
+      { en: "thunder",  ja: "かみなり",   pic: "⚡" },
+      { en: "moon",     ja: "つき",       pic: "🌙" },
+      { en: "star",     ja: "ほし",       pic: "⭐" },
+      { en: "umbrella", ja: "かさ",       pic: "☂️" },
+      { en: "snowman",  ja: "ゆきだるま", pic: "⛄" },
+    ]
+  },
+  school: {
+    name: "がっこう", emo: "🏫",
+    items: [
+      { en: "pencil",   ja: "えんぴつ",   pic: "✏️" },
+      { en: "book",     ja: "ほん",       pic: "📕" },
+      { en: "bag",      ja: "かばん",     pic: "🎒" },
+      { en: "scissors", ja: "はさみ",     pic: "✂️" },
+      { en: "notebook", ja: "ノート",     pic: "📓" },
+      { en: "ruler",    ja: "じょうぎ",   pic: "📏" },
+      { en: "crayon",   ja: "クレヨン",   pic: "🖍️" },
+      { en: "clock",    ja: "とけい",     pic: "🕐" },
+      { en: "teacher",  ja: "せんせい",   pic: "🧑‍🏫" },
+      { en: "school",   ja: "がっこう",   pic: "🏫" },
+      { en: "computer", ja: "パソコン",   pic: "💻" },
+    ]
+  },
+  sport: {
+    name: "スポーツ", emo: "⚽",
+    items: [
+      { en: "soccer",       ja: "サッカー",         pic: "⚽" },
+      { en: "baseball",     ja: "やきゅう",         pic: "⚾" },
+      { en: "basketball",   ja: "バスケットボール", pic: "🏀" },
+      { en: "tennis",       ja: "テニス",           pic: "🎾" },
+      { en: "swimming",     ja: "すいえい",         pic: "🏊" },
+      { en: "volleyball",   ja: "バレーボール",     pic: "🏐" },
+      { en: "table tennis", ja: "たっきゅう",       pic: "🏓" },
+      { en: "skiing",       ja: "スキー",           pic: "⛷️" },
+      { en: "running",      ja: "かけっこ",         pic: "🏃" },
+      { en: "badminton",    ja: "バドミントン",     pic: "🏸" },
+      { en: "rugby",        ja: "ラグビー",         pic: "🏉" },
+      { en: "golf",         ja: "ゴルフ",           pic: "⛳" },
+    ]
+  },
+};
+const ALL_KEY = "all";
+const QUESTIONS = 10;
+const CHOICES = 4;
+
+const $ = id => document.getElementById(id);
+
+// ===== 音声 =====
+const synth = window.speechSynthesis;
+const SETTINGS_KEY = "eigo-kiite-settings";
+const RATES = { slow: 0.7, normal: 0.85, fast: 1.0 };
+let settings = { voiceURI: "auto", rate: "normal", showAll: false };
+try {
+  Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {});
+} catch (e) { /* 保存できない環境でも動くように */ }
+function saveSettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {}
+}
+
+// macOS のおもしろ声など、学習に向かない声
+const NOVELTY = /Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Junior|Ralph|Kathy|Fred|Grandma|Grandpa|Rocko|Eddy|Flo|Reed|Sandy|Shelley/i;
+
+const isUS = v => /^en[-_]US$/i.test(v.lang);
+
+// 声の「自然さ」の点数（高いほど自然）
+function voiceScore(v) {
+  const n = v.name;
+  let s = 0;
+  if (/Natural/i.test(n)) s += 100;           // Microsoft Edge の Natural 音声
+  if (/Neural/i.test(n)) s += 90;
+  if (/Google/i.test(n)) s += 80;             // Chrome の Google US English
+  if (/Premium/i.test(n)) s += 75;            // macOS / iOS の高品質音声
+  if (/Enhanced|拡張/i.test(n)) s += 60;
+  if (/Siri/i.test(n)) s += 50;
+  if (/Online/i.test(n)) s += 20;
+  if (/^(Ava|Allison|Susan|Zoe|Evan|Nathan|Tom|Joelle|Noelle|Samantha)\b/i.test(n)) s += 30;
+  if (/Aria|Jenny|Guy|Ana|Michelle|Emma|Brian|Andrew|Ava/i.test(n) && /Microsoft/i.test(n)) s += 15;
+  if (NOVELTY.test(n)) s -= 200;
+  if (isUS(v)) s += 40;
+  return s;
+}
+
+function englishVoices() {
+  if (!synth) return [];
+  return synth.getVoices().filter(v => /^en([-_]|$)/i.test(v.lang));
+}
+function usVoices() { return englishVoices().filter(isUS); }
+
+function bestVoice() {
+  const pool = usVoices().length ? usVoices() : englishVoices();
+  return pool.slice().sort((a, b) => voiceScore(b) - voiceScore(a))[0] || null;
+}
+
+function currentVoice() {
+  if (settings.voiceURI !== "auto") {
+    const v = englishVoices().find(v => v.voiceURI === settings.voiceURI);
+    if (v) return v;
+  }
+  return bestVoice();
+}
+
+function speak(text, { rate, onend } = {}) {
+  if (!synth) { onend && onend(); return; }
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const voice = currentVoice();
+  u.lang = voice ? voice.lang : "en-US";
+  if (voice) u.voice = voice;
+  u.rate = rate ?? RATES[settings.rate] ?? 0.85;
+  u.pitch = 1.05;
+  u.onend = u.onerror = () => onend && onend();
+  synth.speak(u);
+}
+
+if (synth) {
+  synth.getVoices();
+  synth.addEventListener?.("voiceschanged", () => {
+    if ($("settings").classList.contains("active")) renderSettings();
+  });
+}
+
+// ===== 設定画面 =====
+let screenBeforeSettings = "start";
+const SAMPLE = "Hello! I like apples. Let's play!";
+
+function openSettings() {
+  screenBeforeSettings = document.querySelector(".screen.active").id;
+  synth && synth.cancel();
+  renderSettings.retry = 0;
+  renderSettings();
+  show("settings");
+}
+
+function renderSettings() {
+  renderSettings.retry ??= 0;
+  document.querySelectorAll("#rateBtns button").forEach(b =>
+    b.classList.toggle("on", b.dataset.rate === settings.rate));
+  $("showAll").checked = settings.showAll;
+
+  const list = $("voiceList");
+  list.innerHTML = "";
+  const best = bestVoice();
+  const voices = (settings.showAll ? englishVoices() : usVoices())
+    .slice().sort((a, b) => voiceScore(b) - voiceScore(a));
+
+  const addItem = (uri, title, sub, star) => {
+    const b = document.createElement("button");
+    b.className = "voice-item" + (settings.voiceURI === uri ? " on" : "");
+    b.innerHTML = `<span class="radio"></span><span class="vname"></span><span class="vsub"></span>`;
+    b.querySelector(".vname").textContent = (star ? "★ " : "") + title;
+    b.querySelector(".vsub").textContent = sub;
+    b.onclick = () => {
+      settings.voiceURI = uri;
+      saveSettings();
+      renderSettings();
+      speak(SAMPLE);
+    };
+    list.appendChild(b);
+  };
+
+  addItem("auto", "おまかせ（いちばん しぜんな こえ）",
+    best ? `いまは「${best.name}」` : "こえを さがしています…", false);
+
+  if (!voices.length) {
+    // 声の読みこみが おそいブラウザでは、少しあとで もういちど
+    if (synth && renderSettings.retry++ < 10) setTimeout(() => {
+      if ($("settings").classList.contains("active")) renderSettings();
+    }, 500);
+    const p = document.createElement("p");
+    p.className = "set-note";
+    p.textContent = synth
+      ? "アメリカえいごの こえが みつかりません。「ほかの えいごの こえも みる」を ためしてね。"
+      : "このブラウザでは よみあげが つかえません。";
+    list.appendChild(p);
+  }
+  voices.forEach(v => addItem(v.voiceURI, v.name,
+    `${v.lang}${v.localService ? "" : "・オンライン"}`, voiceScore(v) >= 100));
+}
+
+// ===== 状態 =====
+let themeKey = null;
+let questions = [];
+let index = 0;
+let score = 0;
+let results = [];
+let answered = false;
+let autoNextTimer = null;
+const AUTO_NEXT_MS = { correct: 1500, wrong: 3000 };
+
+
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === id));
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function poolFor(key) {
+  if (key === ALL_KEY) {
+    return Object.values(THEMES).flatMap(t => t.items.map(it => ({ ...it, group: t })));
+  }
+  return THEMES[key].items.map(it => ({ ...it, group: THEMES[key] }));
+}
+
+function buildQuestions(key) {
+  const pool = poolFor(key);
+  let picks = shuffle(pool).slice(0, QUESTIONS);
+  while (picks.length < QUESTIONS) picks.push(pool[Math.floor(Math.random() * pool.length)]);
+  return picks.map(answer => {
+    // まちがいの選択肢は同じテーマから選ぶ
+    const others = shuffle(answer.group.items.filter(it => it.pic !== answer.pic && it.en !== answer.en))
+      .slice(0, CHOICES - 1);
+    return { answer, options: shuffle([answer, ...others]) };
+  });
+}
+
+// ===== スタート画面 =====
+const THEME_COLORS = ["#ffb3c7", "#ffd36b", "#ff9f6b", "#9fd8ff", "#a6e8a0", "#d7b3ff"];
+function renderThemes() {
+  const box = $("themes");
+  const entries = [...Object.entries(THEMES), [ALL_KEY, { name: "ぜんぶ", emo: "🌈" }]];
+  let i = 0;
+  for (const [key, t] of entries) {
+    const b = document.createElement("button");
+    b.className = "theme-btn" + (key === ALL_KEY ? " all" : "");
+    b.style.borderColor = THEME_COLORS[i++ % THEME_COLORS.length];
+    b.innerHTML = `<span class="emo">${t.emo}</span>${t.name}`;
+    b.onclick = () => startQuiz(key);
+    box.appendChild(b);
+  }
+  if (!synth) $("noSpeech").hidden = false;
+}
+
+function startQuiz(key) {
+  themeKey = key;
+  questions = buildQuestions(key);
+  index = 0;
+  score = 0;
+  results = [];
+  show("quiz");
+  showQuestion();
+}
+
+// ===== 問題画面 =====
+function renderDots() {
+  const box = $("dots");
+  box.innerHTML = "";
+  for (let i = 0; i < QUESTIONS; i++) {
+    const d = document.createElement("span");
+    d.className = "dot" + (i === index ? " now" : "") +
+      (results[i] === true ? " ok" : results[i] === false ? " ng" : "");
+    box.appendChild(d);
+  }
+  $("counter").textContent = `${index + 1}/${QUESTIONS}`;
+}
+
+function showQuestion() {
+  answered = false;
+  const q = questions[index];
+  renderDots();
+  $("enText").textContent = q.answer.en;
+  $("jaText").textContent = q.answer.ja;
+  $("jaText").classList.add("hidden");
+  $("hintText").textContent = "🔊を おすと なんども きけるよ";
+  $("nextBtn").classList.remove("show");
+
+  const box = $("choices");
+  box.innerHTML = "";
+  q.options.forEach(opt => {
+    const b = document.createElement("button");
+    b.className = "choice";
+    b.textContent = opt.pic;
+    b.setAttribute("aria-label", opt.ja);
+    b.onclick = () => choose(b, opt);
+    box.appendChild(b);
+  });
+  playWord();
+}
+
+function playWord() {
+  const btn = $("speakerBtn");
+  btn.classList.add("talking");
+  speak(questions[index].answer.en, { onend: () => btn.classList.remove("talking") });
+}
+
+function addMark(btn, text) {
+  const m = document.createElement("span");
+  m.className = "mark";
+  m.textContent = text;
+  btn.appendChild(m);
+}
+
+function choose(btn, opt) {
+  if (answered) return;
+  const q = questions[index];
+  const ok = opt.pic === q.answer.pic;
+  answered = true;
+  results[index] = ok;
+  $("jaText").classList.remove("hidden");
+
+  const buttons = [...$("choices").children];
+  buttons.forEach((b, i) => {
+    b.disabled = true;
+    const isAnswer = q.options[i].pic === q.answer.pic;
+    if (isAnswer) { b.classList.add("correct"); addMark(b, "⭕"); }
+    else if (b !== btn) b.classList.add("dim");
+  });
+
+  if (ok) {
+    score++;
+    $("hintText").textContent = "せいかい！ すごいね！";
+    showHanamaru();
+    speak("Great!");
+  } else {
+    btn.classList.add("wrong", "shake");
+    addMark(btn, "❌");
+    $("hintText").textContent = "おしい！ こたえは ⭕ だよ";
+    speak(q.answer.en);
+  }
+  renderDots();
+  $("nextBtn").textContent = index + 1 < QUESTIONS ? "つぎへ ▶" : "けっかを みる ▶";
+  $("nextBtn").classList.add("show"); // おせば またずに すすめる
+  autoNextTimer = setTimeout(next, ok ? AUTO_NEXT_MS.correct : AUTO_NEXT_MS.wrong);
+}
+
+function showHanamaru() {
+  const el = $("hanamaru");
+  el.classList.remove("show");
+  void el.offsetWidth; // アニメーションを最初から
+  el.classList.add("show");
+}
+
+function next() {
+  clearTimeout(autoNextTimer);
+  if (!answered) return;
+  index++;
+  if (index < QUESTIONS) showQuestion();
+  else showResult();
+}
+
+// ===== 結果画面 =====
+function showResult() {
+  show("result");
+  $("score").innerHTML = `${score}<small> / ${QUESTIONS}もん</small>`;
+  const starCount = score >= 10 ? 3 : score >= 7 ? 2 : score >= 4 ? 1 : 0;
+  $("stars").textContent = "⭐".repeat(starCount) + "☆".repeat(3 - starCount);
+  let msg, voice;
+  if (score === QUESTIONS) { msg = "ぜんもん せいかい！ てんさい！🎉"; voice = "Perfect! Excellent!"; }
+  else if (score >= 7)     { msg = "とっても よくできました！"; voice = "Great job!"; }
+  else if (score >= 4)     { msg = "よくできました！ またやってみよう"; voice = "Good job!"; }
+  else                     { msg = "がんばったね！ もういちど やってみよう"; voice = "Nice try!"; }
+  $("message").textContent = msg;
+  speak(voice);
+  if (score === QUESTIONS) showHanamaru();
+}
+
+// ===== はなまるの花びらを描く =====
+(function drawPetals() {
+  const g = document.getElementById("petals");
+  const n = 12, r = 62, pr = 22;
+  let html = "";
+  for (let i = 0; i < n; i++) {
+    const a1 = (i / n) * Math.PI * 2, a2 = ((i + 1) / n) * Math.PI * 2;
+    const x1 = 100 + r * Math.cos(a1), y1 = 100 + r * Math.sin(a1);
+    const x2 = 100 + r * Math.cos(a2), y2 = 100 + r * Math.sin(a2);
+    html += `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} A${pr} ${pr} 0 1 1 ${x2.toFixed(1)} ${y2.toFixed(1)}"/>`;
+  }
+  g.innerHTML = html;
+})();
+
+// ===== イベント =====
+$("speakerBtn").onclick = playWord;
+$("nextBtn").onclick = next;
+$("homeBtn").onclick = () => { clearTimeout(autoNextTimer); synth && synth.cancel(); show("start"); };
+$("retryBtn").onclick = () => startQuiz(themeKey);
+$("toHomeBtn").onclick = () => show("start");
+$("gearBtn").onclick = openSettings;
+$("settingsBack").onclick = () => { synth && synth.cancel(); show(screenBeforeSettings); };
+$("testVoice").onclick = () => speak(SAMPLE);
+$("showAll").onchange = e => { settings.showAll = e.target.checked; saveSettings(); renderSettings(); };
+document.querySelectorAll("#rateBtns button").forEach(b => b.onclick = () => {
+  settings.rate = b.dataset.rate; saveSettings(); renderSettings(); speak(SAMPLE);
+});
+
+renderThemes();
+</script>
+</body>
+</html>
