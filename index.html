@@ -761,6 +761,52 @@ if (synth) {
   });
 }
 
+// ===== 効果音（音声ファイルは使わず、ブラウザで音を作る）=====
+let audioCtx = null;
+// スマホは最初に画面をさわったときでないと音が出ないので、そこで準備する
+function unlockAudio() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  } catch (e) { /* 音が出せなくても続ける */ }
+}
+document.addEventListener("pointerdown", unlockAudio);
+document.addEventListener("keydown", unlockAudio);
+
+function tone(freq, start, dur, type = "sine", vol = 0.35) {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(vol, start + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(start);
+  osc.stop(start + dur + 0.05);
+}
+// 正解の「ピンポン」（高い音 → 低い音）
+function playPinpon() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  tone(1319, t, 0.35);        // ピン（ミ）
+  tone(1047, t + 0.18, 0.6);  // ポン（ド）
+}
+// まちがいの「ブブー」（低いブザーの音）
+function playBubu() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  tone(150, t, 0.16, "square", 0.12);        // ブ
+  tone(150, t + 0.22, 0.6, "square", 0.12);  // ブー
+}
+// 効果音と よみあげが 重ならないように、少し待ってから よむ
+const SFX_MS = 700;
+let sfxSpeakTimer = null;
+function speakAfterSfx(text) {
+  clearTimeout(sfxSpeakTimer);
+  sfxSpeakTimer = setTimeout(() => speak(text), SFX_MS);
+}
+
 // ===== 設定画面 =====
 let screenBeforeSettings = "start";
 const SAMPLE = "Hello! I like apples. Let's play!";
@@ -1064,12 +1110,14 @@ function choose(btn, opt) {
     score++;
     $("hintText").textContent = "せいかい！ すごいね！";
     showHanamaru();
-    speak("Great!");
+    playPinpon();
+    speakAfterSfx("Great!");
   } else {
     btn.classList.add("wrong", "shake");
     addMark(btn, "❌");
     $("hintText").textContent = "おしい！ こたえは ⭕ だよ";
-    speak(q.answer.en);
+    playBubu();
+    speakAfterSfx(q.answer.en);
   }
   renderDots();
   $("nextBtn").textContent = index + 1 < QUESTIONS ? "つぎへ ▶" : "けっかを みる ▶";
@@ -1086,6 +1134,7 @@ function showHanamaru() {
 
 function next() {
   clearTimeout(autoNextTimer);
+  clearTimeout(sfxSpeakTimer);
   if (!answered) return;
   index++;
   if (index < QUESTIONS) showQuestion();
@@ -1125,7 +1174,7 @@ function showResult() {
 // ===== イベント =====
 $("speakerBtn").onclick = playWord;
 $("nextBtn").onclick = next;
-$("homeBtn").onclick = () => { clearTimeout(autoNextTimer); synth && synth.cancel(); show("start"); };
+$("homeBtn").onclick = () => { clearTimeout(autoNextTimer); clearTimeout(sfxSpeakTimer); synth && synth.cancel(); show("start"); };
 $("retryBtn").onclick = () => startQuiz(themeKey);
 $("toHomeBtn").onclick = () => show("start");
 $("gearBtn").onclick = openSettings;
